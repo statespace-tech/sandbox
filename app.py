@@ -39,4 +39,5 @@ class Handler(BaseHTTPRequestHandler):
         print(f"{self.command} {self.path}", file=sys.stderr, flush=True)
 
 
-ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "8000"))), Handler).serve_forever()
+if __name__ == "__main__":
+    ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "8000"))), Handler).serve_forever()
