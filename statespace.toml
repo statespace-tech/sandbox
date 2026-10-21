@@ -3,3 +3,4 @@
 app = "sandbox"
 # The share of all the app's subjects that an arm gets. Its control gets as many.
 share = 0.25
+max_traffic = 0.5
