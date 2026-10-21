@@ -7,7 +7,7 @@ import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # The change an arm tests. An exp/ branch might lower the price.
-PRICE = 12
+PRICE = 10
 
 
 class Handler(BaseHTTPRequestHandler):
