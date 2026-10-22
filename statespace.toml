@@ -1,0 +1,7 @@
+# Statespace runs a branch named exp/<name> as an experiment while its
+# pull request can merge. Settings: https://docs.statespace.com/reference/experiment-definition
+app = "sandbox"
+# The share of the app's subjects that an arm gets. Its control gets as many.
+share = 0.05
+# The most of the app's subjects that experiments may hold together.
+max_traffic = 0.2
