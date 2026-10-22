@@ -17,9 +17,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # This step builds your Dockerfile. To build another way, such as with ko,
-      # Jib, or buildpacks, replace this step. Keep the id
-      # and the digest output, or give the image to the last step.
+      # This step builds your Dockerfile.
+      # To build another way, such as with ko, Jib, or buildpacks,
+      # replace this step. Keep its id and digest output, or give
+      # your image to the last step.
       - uses: docker/build-push-action@v6
         id: build
         with:
