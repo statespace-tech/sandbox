@@ -1,0 +1,32 @@
+# Build each commit of an exp/ branch, and record it as a version of its arm.
+name: Statespace
+on:
+  push:
+    branches: ["exp/**"]
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+jobs:
+  arm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # This step builds your Dockerfile. To build another way, such as with ko,
+      # Jib, or buildpacks, replace this step. Keep the id
+      # and the digest output, or give the image to the last step.
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/statespace-tech/sandbox:${{ github.sha }}
+      # Record the image. Keep this step.
+      - uses: statespace-tech/action@v1
+        with:
+          image: ghcr.io/statespace-tech/sandbox@${{ steps.build.outputs.digest }}
