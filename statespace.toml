@@ -5,3 +5,7 @@ app = "sandbox"
 share = 0.05
 # The most of the app's subjects that experiments may hold together.
 max_traffic = 0.2
+# A subject is the shop's own user cookie. Visitors without it get the default.
+subject = 'request.cookies.user_id'
+# Only visitors from the US may enter.
+eligibility = 'request.headers["cf-ipcountry"] == "US"'
