@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # The change an arm tests. An exp/ branch might lower the price.
 PRICE = 12
+SHIPPING = 0
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -24,6 +25,7 @@ class Handler(BaseHTTPRequestHandler):
                 "arm": self.headers.get("x-statespace-arm", "default"),
                 "commit": os.environ.get("STATESPACE_COMMIT"),
                 "price": PRICE,
+                "shipping": SHIPPING,
             }
         )
 
