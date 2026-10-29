@@ -20,9 +20,11 @@ def call(path, method="GET", headers=None):
         return json.load(response)
 
 
-page = call("/", headers={"x-statespace-side": "arm", "x-statespace-arm": "a1b2c3d"})
-assert page == {"side": "arm", "arm": "a1b2c3d", "price": app.PRICE}, page
-assert call("/")["side"] == "live"
+arm = {"x-statespace-experiment": "price", "x-statespace-arm": "a1b2c3d"}
+page = call("/", headers=arm)
+assert page == {"experiment": "price", "arm": "a1b2c3d", "price": app.PRICE}, page
+page = call("/")
+assert page == {"experiment": None, "arm": None, "price": app.PRICE}, page
 assert call("/buy", method="POST") == {"bought": 1, "price": app.PRICE}
 assert call("/health") == {"ok": True}
 

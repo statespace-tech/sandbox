@@ -1,6 +1,6 @@
 """A small shop for trying Statespace.
 
-GET / shows the price and which side served the request.
+GET / shows the price, and the experiment and arm that served the request.
 POST /buy buys one item and prints a JSON line on stdout.
 """
 
@@ -9,7 +9,8 @@ import os
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-# The change that an arm tests. A commit on a branch can lower the price.
+# The change that the experiment "price" tests. A commit on a branch can
+# lower the price.
 PRICE = 12
 
 
@@ -22,8 +23,9 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(
             200,
             {
-                # The proxy sets these headers. Live gets none.
-                "side": self.headers.get("x-statespace-side", "live"),
+                # The proxy sets these headers on requests of an arm.
+                # Live gets none.
+                "experiment": self.headers.get("x-statespace-experiment"),
                 "arm": self.headers.get("x-statespace-arm"),
                 "price": PRICE,
             },
