@@ -1,5 +1,6 @@
 # Build every push to every branch, and record the build with Statespace.
-# Any recorded commit can become an arm: ssp arm add <commit> --app sandbox
+# Any recorded commit can become an arm:
+#   ssp experiment update price --arm <commit>=0.05
 name: Build
 on:
   push:
