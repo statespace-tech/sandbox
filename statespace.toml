@@ -1,7 +1,40 @@
-# Statespace runs a branch named exp/<name> as an experiment while its
-# pull request can merge. Settings: https://docs.statespace.com/reference/experiment-definition
-app = "sandbox"
-# The share of the app's subjects that an arm gets. Its control gets as many.
-share = 0.05
-# The most of the app's subjects that experiments may hold together.
+# Statespace settings for the shop.
+# Reference: https://docs.statespace.com/reference/statespace-toml
+#
+# Two apps run from this folder: sandbox-dev and sandbox.
+# The keys at the top apply to both apps.
+
+# The largest share of visitors in arms plus the control.
 max_traffic = 0.2
+
+# A visitor buys an item.
+[[event]]
+name = "buy"
+match = '''
+request.method == "POST"
+  && request.path == "/buy"
+  && request.status < 300
+'''
+
+# The shop prints {"event": "purchase", ...} on stdout.
+[[event]]
+name = "purchase_line"
+match = 'stdout.json.event == "purchase"'
+
+# The first metric is the headline in the commit status.
+[[metric]]
+label = "buy rate %"
+value = '100.0 * events["buy"].subjects / subjects'
+
+[[metric]]
+label = "purchases per 100 requests"
+value = '100.0 * events["purchase_line"].lines / requests'
+
+# The development copy. Every visitor can be in an arm,
+# and testers can open an arm with ?ssp_arm=<commit>.
+[app.sandbox-dev]
+max_traffic = 1.0
+overrides = true
+
+# The public copy. It uses the shared settings above.
+[app.sandbox]
