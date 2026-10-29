@@ -1,15 +1,12 @@
-# Branch protection on main requires this check, so a pull request can merge,
-# and its arm can run, only while the test passes.
+# Run the tests on each pull request.
 name: Test
 on:
   pull_request:
-  push:
-    branches: [main]
 permissions:
   contents: read
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: python3 test.py
