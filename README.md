@@ -1,27 +1,30 @@
 # Statespace sandbox
 
 A small shop to try [Statespace](https://statespace.com) from start to end.
-You run the shop behind `ssp proxy` with Docker. Then you test a lower price
-as an arm on a share of the visitors.
+You run the shop behind `ssp proxy` with Docker. Then you run the experiment
+`price`: the live commit and a commit with a lower price, each on 5% of the
+visitors.
 
 | File | Purpose |
 | --- | --- |
 | `app.py`, `Dockerfile` | The shop. `POST /buy` prints a JSON line on stdout |
 | `test.py` | The tests. Run them with `python3 test.py` |
-| `statespace.toml` | The events, the metrics, and the settings of two apps |
+| `statespace.toml` | The events, the metrics, the experiment `price`, and the settings of two apps |
 | `.github/workflows/build.yml` | Builds each push and records the build |
 | `.github/workflows/test.yml` | Runs the tests on each pull request |
 
 Two apps run from this folder:
 
-- `sandbox`: the public copy. It uses the shared settings.
-- `sandbox-dev`: a development copy. It can put all visitors in arms, and
-  testers can open an arm with `?ssp_arm=<commit>`.
+- `sandbox`: the public copy. The arms of `price` get at most 20% of the
+  visitors.
+- `sandbox-dev`: a development copy. The arms of `price` can get all
+  visitors, and testers can open an arm with `?ssp_arm=price:<commit>`.
 
 ## What you need
 
 - The CLI, signed in with GitHub. You need the admin role on
-  `statespace-tech/sandbox` to add the app and its token.
+  `statespace-tech/sandbox` to add the app and its token, and the write
+  role to start and stop the experiment.
 
   ```shell
   curl -fsSL https://statespace.com/install.sh | bash
@@ -72,14 +75,21 @@ Two apps run from this folder:
    ssp proxy docker --app sandbox --image-file "$PWD/image"
    ```
 
-6. In a second terminal, open the shop through the proxy. The response
-   says `"side": "live"`.
+6. In a second terminal, open the shop through the proxy. No experiment
+   runs, so live answers. The response has `"experiment": null`.
 
    ```shell
    curl -s localhost:8080/
    ```
 
-7. Change the price on a new branch, and push the commit. The workflow
+7. Show the experiment. It is `stopped` and has no arms. The live
+   commit of `main` defines it, in `[experiment.price]`.
+
+   ```shell
+   ssp experiment show price --app sandbox
+   ```
+
+8. Change the price on a new branch, and push the commit. The workflow
    builds the commit and records the build.
 
    ```shell
@@ -90,64 +100,82 @@ Two apps run from this folder:
    git push -u origin lower-price
    ```
 
-8. When the workflow is done, add the commit as an arm. 5% of the visitors
-   get the arm, and 5% get the control.
+9. When the workflow is done, set the arms. The live commit is the first
+   arm, so it is the reference. The new commit is the second arm. Each arm
+   gets 5% of the visitors.
 
    ```shell
-   ssp arm add "$(git rev-parse HEAD)" --app sandbox \
-     --share 0.05 --note "price 9 instead of 12"
+   main=$(git rev-parse origin/main)
+   new=$(git rev-parse HEAD)
+   ssp experiment update price --app sandbox \
+     --arm "$main=0.05" --arm "$new=0.05"
    ```
 
-9. Send visitors through the proxy. Each visitor gets its own cookie
-   file. One visitor in three buys an item.
-
-   ```shell
-   for i in $(seq 1 600); do
-     curl -s -c "jar$i" -b "jar$i" localhost:8080/ > /dev/null
-     if [ $((i % 3)) -eq 0 ]; then
-       curl -s -c "jar$i" -b "jar$i" -X POST \
-         localhost:8080/buy > /dev/null
-     fi
-     rm "jar$i"
-   done
-   ```
-
-10. Look at the evidence. The commit status `statespace/sandbox` on the
-    commit shows the share, the subjects, the split check, and
-    `buy rate %` for the arm and the control.
+10. Start the experiment. The command waits until both arms are ready. It
+    waits at most 5 minutes.
 
     ```shell
-    ssp arm show "$(git rev-parse HEAD)" --app sandbox
-    commit=$(git rev-parse HEAD)
-    gh api "repos/statespace-tech/sandbox/commits/$commit/statuses" \
+    ssp experiment start price --app sandbox \
+      --note "price 9 instead of 12"
+    ```
+
+11. Send visitors through the proxy. Each visitor gets its own cookie
+    file. One visitor in three buys an item.
+
+    ```shell
+    for i in $(seq 1 600); do
+      curl -s -c "jar$i" -b "jar$i" localhost:8080/ > /dev/null
+      if [ $((i % 3)) -eq 0 ]; then
+        curl -s -c "jar$i" -b "jar$i" -X POST \
+          localhost:8080/buy > /dev/null
+      fi
+      rm "jar$i"
+    done
+    ```
+
+12. Look at the evidence. The commit status `statespace/sandbox/price`
+    on each arm's commit shows the version, the share, the subjects, the
+    split check, and `buy rate %` against the other arm.
+
+    ```shell
+    ssp experiment show price --app sandbox
+    gh api "repos/statespace-tech/sandbox/commits/$new/statuses" \
       --jq '.[0] | .context + ": " + .description'
     ```
 
-11. Stop the arm. Its visitors go back to live in seconds. The commit
-    status becomes red.
+13. Stop the experiment. Its visitors go back to live in seconds.
+    Statespace keeps the evidence of this version.
 
     ```shell
-    ssp arm stop "$(git rev-parse HEAD)" --app sandbox \
-      --note "check the stop"
+    ssp experiment stop price --app sandbox --note "enough data"
     ```
 
-12. Resume the arm.
+## Change the arms
 
-    ```shell
-    ssp arm resume "$(git rev-parse HEAD)" --app sandbox
-    ```
+You cannot change the arms of a running experiment. Stop it, update it,
+and start it again. Each start begins a new version.
 
-13. Remove the arm. Statespace keeps its evidence. The commit status says
-    "Ended".
+1. Push a third commit, such as a price of 10.
+2. Replace the arm `$new` with the new commit. `=0` removes an arm. The
+   arm `$main` does not change.
 
-    ```shell
-    ssp arm remove "$(git rev-parse HEAD)" --app sandbox
-    ```
+   ```shell
+   ssp experiment update price --app sandbox \
+     --arm "$new=0" --arm "$(git rev-parse HEAD)=0.05"
+   ```
+
+3. Start the experiment again.
+
+   ```shell
+   ssp experiment start price --app sandbox \
+     --note "price 10 instead of 12"
+   ```
 
 ## Open an arm yourself
 
 The app `sandbox-dev` has `overrides = true`. On a proxy for
-`sandbox-dev`, add `?ssp_arm=<commit>` to the URL to get a running arm.
+`sandbox-dev`, add `?ssp_arm=price:<commit>` to the URL to get an arm of
+the running experiment.
 
 1. Add the app and a token for it, as in steps 2 and 3.
 
@@ -163,24 +191,32 @@ The app `sandbox-dev` has `overrides = true`. On a proxy for
      --image-file "$PWD/image" --listen 0.0.0.0:8081
    ```
 
-3. Add the commit as an arm of `sandbox-dev`.
+3. Set the arms of `price` on `sandbox-dev`, and start it.
 
    ```shell
-   ssp arm add "$(git rev-parse HEAD)" --app sandbox-dev
+   ssp experiment update price --app sandbox-dev \
+     --arm "$main=0.05" --arm "$new=0.05"
+   ssp experiment start price --app sandbox-dev
    ```
 
-4. Open the arm. Use the first 7 characters of the commit or more.
+4. Open the new arm. Use the first 7 characters of the commit or more.
 
    ```shell
    curl -s -L -c jar -b jar \
-     "localhost:8081/?ssp_arm=$(git rev-parse --short=7 HEAD)"
+     "localhost:8081/?ssp_arm=price:${new:0:7}"
    ```
 
-The response says `"side": "arm"` and `"price": 9`.
+The response has `"experiment": "price"` and `"price": 9`.
 
 ## Clean up
 
-1. Remove every arm of each app.
+1. Stop the experiment on each app.
+
+   ```shell
+   ssp experiment stop price --app sandbox
+   ssp experiment stop price --app sandbox-dev
+   ```
+
 2. Stop the proxies.
 3. Remove the apps. This deletes their data.
 
