@@ -1,11 +1,8 @@
 # Statespace settings for the shop.
 # Reference: https://docs.statespace.com/reference/statespace-toml
 #
-# Two apps run from this folder: sandbox-dev and sandbox.
-# The keys at the top apply to both apps.
-
-# The largest share of visitors in arms plus the control.
-max_traffic = 0.2
+# Two apps run from this folder: sandbox and sandbox-dev.
+# The shared events and metrics apply to every experiment.
 
 # A visitor buys an item.
 [[event]]
@@ -21,7 +18,7 @@ request.method == "POST"
 name = "purchase_line"
 match = 'stdout.json.event == "purchase"'
 
-# The first metric is the headline in the commit status.
+# The headline in the commit status: the first metric.
 [[metric]]
 label = "buy rate %"
 value = '100.0 * events["buy"].subjects / subjects'
@@ -30,11 +27,16 @@ value = '100.0 * events["buy"].subjects / subjects'
 label = "purchases per 100 requests"
 value = '100.0 * events["purchase_line"].lines / requests'
 
-# The development copy. Every visitor can be in an arm,
-# and testers can open an arm with ?ssp_arm=<commit>.
+# The experiment "price" compares commits with a different
+# PRICE in app.py. Each visitor is a subject (the cookie
+# ssp_sid). The arms together get at most 20% of visitors.
+[experiment.price]
+max_share = 0.2
+
+# The development copy. Every visitor can be in an arm, and
+# testers can open an arm with ?ssp_arm=price:<commit>.
 [app.sandbox-dev]
-max_traffic = 1.0
 overrides = true
 
-# The public copy. It uses the shared settings above.
-[app.sandbox]
+[app.sandbox-dev.experiment.price]
+max_share = 1.0
