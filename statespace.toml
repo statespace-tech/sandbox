@@ -31,7 +31,7 @@ value = '100.0 * events["purchase_line"].lines / requests'
 # PRICE in app.py. Each visitor is a subject (the cookie
 # ssp_sid). The arms together get at most 20% of visitors.
 [experiment.price]
-max_share = 0.2
+max_traffic = 0.2
 
 # The development copy. Every visitor can be in an arm, and
 # testers can open an arm with ?ssp_arm=price:<commit>.
@@ -39,4 +39,4 @@ max_share = 0.2
 overrides = true
 
 [app.sandbox-dev.experiment.price]
-max_share = 1.0
+max_traffic = 1.0
